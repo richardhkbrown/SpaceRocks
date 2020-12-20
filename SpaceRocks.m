@@ -1,7 +1,7 @@
 function SpaceRocks
 
     rng(0);
-    
+
     keyPressBufferN = 1000;
     keyPressBuffer = int8(zeros(1,keyPressBufferN));
     keyPressBuffer_idxInput = 1;
@@ -19,10 +19,11 @@ function SpaceRocks
     xRatio = xPixels/yPixels;
     
     % Game rules
-    numberOfLives0 = 3;
+    numberOfLives0 = 30;
     numberOfLives = numberOfLives0;
     exitGame = false;
     gameMode = 0; % 0 attract, 1 spawn player, 2 play, 3 player dead, 4 spawn rocks, 5 game over
+    
     gameEventTime = nan;
     allRocksDead = true;
     playerDead = true;
@@ -37,7 +38,7 @@ function SpaceRocks
     statusRenderCueStatuses = char('?'*ones(1,maxStatusRender));
     statusRenderCueIPVATs = NaN(maxStatusRender,7);
     
-    maxShapes = max(2*numRocks,10);
+    maxShapes = max(2*numRocks+10,10);
     shapeCueShapes = cell(1,maxShapes);
     shapeCueSimpleShapes = cell(1,maxShapes);
     shapeCueRadii = NaN(1,maxShapes);
@@ -186,7 +187,7 @@ function SpaceRocks
     
     function SequenceGame(command)
         
-        persistent livesRenderCueIds gameOverRenderCueIds ...
+        persistent livesRenderCueIds gameOverRenderCueIds youWinRenderCueIds ...
             controlsRenderCueIds;
         
         switch command
@@ -293,6 +294,62 @@ function SpaceRocks
                 statusRenderCueStatuses(gameOverRenderCueIds(2)) = 'h';
                 statusRenderCueIPVATs(gameOverRenderCueIds(2),:) = [overShapeCueId 0 0 0 0 nan time];
                 
+                % You win render
+                youWinRenderCueIds = find(statusRenderCueStatuses=='?',2);
+                
+                % Create shape for "you"
+                shape = [
+                    0.1 0.9 %y
+                    0.2 0.82
+                    0.3 0.9
+                    0.2 0.8
+                    0.2 0.7
+                    
+                    0.4 0.7 %o
+                    0.4 0.8
+                    0.3 0.8
+                    0.3 0.7
+                    
+                    0.5 0.7 %u
+                    0.5 0.8
+                    0.5 0.7
+                    0.58 0.7
+                    0.6 0.8
+                    ];
+                
+                shape = shape - mean([min(shape,[],1);max(shape,[],1)],1);
+                shape = shape + [0.5*xRatio 0.6];
+                gameShapeCueId = find(isnan(shapeCueRadii),1);
+                shapeCueSimpleShapes{gameShapeCueId} = shape;
+                shapeCueRadii(gameShapeCueId) = -1;
+                statusRenderCueStatuses(youWinRenderCueIds(1)) = 'h';
+                statusRenderCueIPVATs(youWinRenderCueIds(1),:) = [gameShapeCueId 0 0 0 0 nan time];
+                
+                % Greate shape for "win"
+                shape = [
+                    0.1 0.9 % w
+                    0.2 0.7
+                    0.2 0.8
+                    0.3 0.7
+                    0.3 0.9
+                    0.3 0.7
+                    0.4 0.7
+                    0.4 0.8
+                    0.4 0.7
+                    0.5 0.7
+                    0.5 0.8
+                    0.6 0.7
+                    0.6 0.8
+                    ];
+                
+                shape = shape - mean([min(shape,[],1);max(shape,[],1)],1);
+                shape = shape + [0.5*xRatio 0.35];
+                overShapeCueId = find(isnan(shapeCueRadii),1);
+                shapeCueSimpleShapes{overShapeCueId} = shape;
+                shapeCueRadii(overShapeCueId) = -1;
+                statusRenderCueStatuses(youWinRenderCueIds(2)) = 'h';
+                statusRenderCueIPVATs(youWinRenderCueIds(2),:) = [overShapeCueId 0 0 0 0 nan time];
+                
                 % Controls render
                 controlsRenderCueIds = find(statusRenderCueStatuses=='?',4);
                 
@@ -377,12 +434,19 @@ function SpaceRocks
 
                 if ( gameMode == 5 )
                     
-                    % Render game over when in game mode 5
+                    % Render "game over" when in game mode 5
                     renderCueIds = statusRenderCueStatuses(gameOverRenderCueIds) == 'h';
                     if ( any(renderCueIds) )
                         statusRenderCueStatuses(gameOverRenderCueIds(renderCueIds)) = 'r';
                     end
                     
+                elseif ( gameMode == 6 )
+                    
+                    % Render "you win" when in game mode 6
+                    renderCueIds = statusRenderCueStatuses(youWinRenderCueIds) == 'h';
+                    if ( any(renderCueIds) )
+                        statusRenderCueStatuses(youWinRenderCueIds(renderCueIds)) = 'r';
+                    end                    
                 end
                 
                 if ( ~isnan(gameEventTime) )
@@ -486,10 +550,21 @@ function SpaceRocks
                     % (play).
                     
                     numRocks = numRocks * 2;
-                    HandleRocks('I');
-                    gameMode = 2;
-                    
-                    timeVersusSpawn = time;
+                    if ( numRocks > 5 )
+                        
+                        % If the player survived enough levels
+                        % game mode 6 (you win) for 10 seconds
+                        gameMode = 6;
+                        gameEventTime = time + 10;
+                        
+                    else
+                        
+                        HandleRocks('I');
+                        gameMode = 2;
+                        
+                        timeVersusSpawn = time;
+                        
+                    end
                     
                 elseif ( gameMode == 5 )
                     
@@ -497,8 +572,15 @@ function SpaceRocks
                     % event delay timer runs out.
                     gameMode = 0;
                     
+                elseif ( gameMode == 6 )
+                    
+                    % Game mode 6 is you win.  Go to game mode 0 once the
+                    % event delay timer runs out.
+                    gameMode = 0;
+                    playerDead = true;
+                    
                 end
-                
+                                
         end
 
     end
@@ -580,7 +662,7 @@ function SpaceRocks
                 end
                 
                 % Check is there are any rocks left
-                if ( all(renderCueStatuses(renderCueIds) == '?') )
+                if ( all(renderCueStatuses(renderCueIds) == 'y') ) % 'y' is recycled
                     allRocksDead = true;
                     return;
                 end
@@ -603,7 +685,7 @@ function SpaceRocks
                         IPVAT = renderCueIPVATs(renderCueId,:);
                         
                         % Explode the rock
-                        renderCueStatuses(renderCueId) = 'e';
+                        renderCueStatuses(renderCueId) = 'f'; % use 'f' instead of 'e' to recycle cue
                         thisRockScale = ceil(rockSize/shapeCueRadii(IPVAT(1)));
                         
                         if ( thisRockScale < 3 )
@@ -658,7 +740,7 @@ function SpaceRocks
                     end
                     
                 end
-                
+
         end
 
     end
@@ -1057,6 +1139,7 @@ function SpaceRocks
                 
                 % Allocate render cues for versus and bullets
                 renderCueIds = find(renderCueStatuses == '?',2+numBullets);
+
                 randomAng = rand(1)*360;
                 randomPos = 0.4*[cosd(randomAng) sind(randomAng)] + ...
                     0.5*[xRatio 1];
@@ -1132,11 +1215,7 @@ function SpaceRocks
                         colliderCuePs(colliderIds,:) = colliderPositions(updateVersus,:);
                         colliderCueStatuses(colliderIds) = -2;
                     end
-                    
-                    
-                    
-                    
-                    
+
                     % Versus Logic
                     thrust = false;
                     turnLeft = false;
@@ -1258,7 +1337,6 @@ function SpaceRocks
                             elseif ( turnAngle < 0 )
                                 turnLeft = true;
                             end
-                            norm(velocity)
                             if ( abs(turnAngle) < norm(velocity)*200 )
                                 thrust = true;
                             end
@@ -1267,7 +1345,6 @@ function SpaceRocks
                             versusInfo = time;
                         end
                     end
-                    
                     
                     if ( turnLeft || turnRight )
                         
@@ -1471,7 +1548,7 @@ function SpaceRocks
                     elseif ( renderCueStatuses(renderCueId)=='e' | ...
                             renderCueStatuses(renderCueId)=='f' )
                         % If the status is set to 'e' start the explode
-                        % animation
+                        % animation ('f' is explode but recycle cue)
                         sound(explodeNoise);
                         renderCueStatuses(renderCueId) = upper(renderCueStatuses(renderCueId));
                     elseif ( renderCueStatuses(renderCueId)=='E' | ...
@@ -1500,7 +1577,7 @@ function SpaceRocks
                     shape = shapeCueShapes{IPVAT(1)};
                     
                     if ( statusRenderCueStatuses(renderCueId)=='r' )
-                        statusRenderCueStatuses(renderCueId)='h';
+                        statusRenderCueStatuses(renderCueId) = 'h';
                     end
                     
                     if ( isempty(shape) )
@@ -1525,11 +1602,22 @@ function SpaceRocks
                 [idxR,idxG,idxB] = IndexToIndex(imageBuffer,pixelPositions(:,1),pixelPositions(:,2));
 
                 if ( renderCueCue==1 )
-                    imageBuffer(idxR) = 255;
-                    imageBuffer(idxG) = 255;
-                    imageBuffer(idxB) = 255;
+                    
+                    if (any(~isfinite(idxR) | ~isfinite(idxG) | ~isfinite(idxB)))
+                        % If a position is NaN the renderer will crash
+                        disp('Warning');
+                    else
+                        imageBuffer(idxR) = 255;
+                        imageBuffer(idxG) = 255;
+                        imageBuffer(idxB) = 255;
+                    end
                 elseif ( renderCueCue==2 )
-                    imageBuffer(idxG) = 255;
+                    if ( any(~isfinite(idxG)) )
+                        % If a position is NaN the renderer will crash
+                        disp('Warning');
+                    else
+                        imageBuffer(idxG) = 255;
+                    end
                 end
                 
             end
