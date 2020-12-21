@@ -1,6 +1,8 @@
 function SpaceRocks
 
     rng(0);
+    
+    debugMode = false;
 
     keyPressBufferN = 1000;
     keyPressBuffer = int8(zeros(1,keyPressBufferN));
@@ -8,7 +10,7 @@ function SpaceRocks
     keyPressBuffer_idxProcessed = 1;
     keyDownArray = false(1,4);
     
-    numRocks0 = 1;
+    numRocks0 = 4;
     numRocks = numRocks0;
     rockPoints = 5;
     rockSize = 0.1;
@@ -19,7 +21,7 @@ function SpaceRocks
     xRatio = xPixels/yPixels;
     
     % Game rules
-    numberOfLives0 = 30;
+    numberOfLives0 = 3;
     numberOfLives = numberOfLives0;
     exitGame = false;
     gameMode = 0; % 0 attract, 1 spawn player, 2 play, 3 player dead, 4 spawn rocks, 5 game over
@@ -30,15 +32,15 @@ function SpaceRocks
     versusDead = true;
     playerCueIndex = nan;
     
-    maxRender = max(numRocks+10,10);
+    maxRender = max(numRocks+10,20);
     renderCueStatuses = char('?'*ones(1,maxRender));
     renderCueIPVATs = NaN(maxRender,7);
     
-    maxStatusRender = max(numberOfLives+10,10);
+    maxStatusRender = max(numberOfLives+10,20);
     statusRenderCueStatuses = char('?'*ones(1,maxStatusRender));
     statusRenderCueIPVATs = NaN(maxStatusRender,7);
     
-    maxShapes = max(2*numRocks+10,10);
+    maxShapes = max(2*numRocks+10,20);
     shapeCueShapes = cell(1,maxShapes);
     shapeCueSimpleShapes = cell(1,maxShapes);
     shapeCueRadii = NaN(1,maxShapes);
@@ -47,7 +49,7 @@ function SpaceRocks
     shapeCueSimpleShapes{1} = [0 0];
     shapeCueRadii(1) = -1;
     
-    maxColliders = max(2*numRocks,10);
+    maxColliders = max(2*numRocks+10,20);
     colliderCueStatuses = NaN(1,maxColliders);
     colliderCuePs = NaN(maxColliders,2);
     
@@ -64,45 +66,47 @@ function SpaceRocks
     figure(1);
     
     % Debug Stuff
-    keyDownArrayDebug = keyDownArray;
-    hTextDebug = text(gca,round(0.01*xPixels),round(0.8*yPixels),'x');
-    hTextDebug.HorizontalAlignment = 'left';
-    hTextDebug.VerticalAlignment = 'top';
-    hTextDebug.Color = [1 0 0];
-    
-    frameCountDebug = [0 0];
-    hTextFps = text(gca,round(0.01*xPixels),round(0.75*yPixels),'x');
-    hTextFps.HorizontalAlignment = 'left';
-    hTextFps.VerticalAlignment = 'top';
-    hTextFps.Color = [0 1 0];
-    hTextFps.FontName = 'Courier';
-    hTextFps.FontWeight = 'bold';
-
-    modeDebug = [nan nan];
-    hTextMode = text(gca,round(0.01*xPixels),round(0.7*yPixels),'x');
-    hTextMode.HorizontalAlignment = 'left';
-    hTextMode.VerticalAlignment = 'top';
-    hTextMode.Color = [0 0 1];
-    hTextMode.FontName = 'Courier';
-    hTextMode.FontWeight = 'bold';
-    
-    statusStringDebug = cell(10,1);
-    hTextStatus = text(gca,round(0.01*xPixels),round(0.65*yPixels),statusStringDebug);
-    hTextStatus.HorizontalAlignment = 'left';
-    hTextStatus.VerticalAlignment = 'top';
-    hTextStatus.Color = [0 0 1];
-    
-    hTextCue = text(gca,round(0.01*xPixels),round(0.15*yPixels),statusStringDebug);
-    hTextCue.HorizontalAlignment = 'left';
-    hTextCue.VerticalAlignment = 'top';
-    hTextCue.Color = [0 1 0];
-    hTextCue.FontName = 'Courier';
-    hTextCue.FontWeight = 'bold';
-    hTextCue.FontSize = 6;
-    
-    hold on;
-    hVersus = plot(nan,nan,'go-');
-    hold off;
+    if ( debugMode )
+        keyDownArrayDebug = keyDownArray;
+        hTextDebug = text(gca,round(0.01*xPixels),round(0.8*yPixels),'x');
+        hTextDebug.HorizontalAlignment = 'left';
+        hTextDebug.VerticalAlignment = 'top';
+        hTextDebug.Color = [1 0 0];
+        
+        frameCountDebug = [0 0];
+        hTextFps = text(gca,round(0.01*xPixels),round(0.75*yPixels),'x');
+        hTextFps.HorizontalAlignment = 'left';
+        hTextFps.VerticalAlignment = 'top';
+        hTextFps.Color = [0 1 0];
+        hTextFps.FontName = 'Courier';
+        hTextFps.FontWeight = 'bold';
+        
+        modeDebug = [nan nan];
+        hTextMode = text(gca,round(0.01*xPixels),round(0.7*yPixels),'x');
+        hTextMode.HorizontalAlignment = 'left';
+        hTextMode.VerticalAlignment = 'top';
+        hTextMode.Color = [0 0 1];
+        hTextMode.FontName = 'Courier';
+        hTextMode.FontWeight = 'bold';
+        
+        statusStringDebug = cell(10,1);
+        hTextStatus = text(gca,round(0.01*xPixels),round(0.65*yPixels),statusStringDebug);
+        hTextStatus.HorizontalAlignment = 'left';
+        hTextStatus.VerticalAlignment = 'top';
+        hTextStatus.Color = [0 0 1];
+        
+        hTextCue = text(gca,round(0.01*xPixels),round(0.15*yPixels),statusStringDebug);
+        hTextCue.HorizontalAlignment = 'left';
+        hTextCue.VerticalAlignment = 'top';
+        hTextCue.Color = [0 1 0];
+        hTextCue.FontName = 'Courier';
+        hTextCue.FontWeight = 'bold';
+        hTextCue.FontSize = 6;
+        
+        hold on;
+        hVersus = plot(nan,nan,'go-');
+        hold off;
+    end
     
     % Slow update timing
     updatePeriod = 0.1;
@@ -418,19 +422,21 @@ function SpaceRocks
                 end
                 
                 % Debug stuff
-                if ( ~isequal(statusStringDebug,hTextStatus.String) )
-                    hTextStatus.String = statusStringDebug;
+                if (debugMode )
+                    if ( ~isequal(statusStringDebug,hTextStatus.String) )
+                        hTextStatus.String = statusStringDebug;
+                    end
+                    FPS = frameCountDebug(1)/(time-frameCountDebug(2));
+                    frameCountDebug(1) = 0;
+                    frameCountDebug(2) = time;
+                    hTextFps.String = sprintf('%9.2f runtime %6.2f fps',time,FPS);
+                    if ( gameMode~=modeDebug(1) || numberOfLives~=modeDebug(2) )
+                        modeDebug = [gameMode numberOfLives];
+                        hTextMode.String = sprintf('GameMode %3d Lives %1d',modeDebug);
+                    end
+                    hTextCue.String = {renderCueStatuses,statusRenderCueStatuses, ...
+                        sprintf('%3d',colliderCueStatuses),sprintf('%d',isfinite(shapeCueRadii))};
                 end
-                FPS = frameCountDebug(1)/(time-frameCountDebug(2));
-                frameCountDebug(1) = 0;
-                frameCountDebug(2) = time;
-                hTextFps.String = sprintf('%9.2f runtime %6.2f fps',time,FPS);
-                if ( gameMode~=modeDebug(1) || numberOfLives~=modeDebug(2) )
-                    modeDebug = [gameMode numberOfLives];
-                    hTextMode.String = sprintf('GameMode %3d Lives %1d',modeDebug);
-                end
-                hTextCue.String = {renderCueStatuses,statusRenderCueStatuses, ...
-                    sprintf('%3d',colliderCueStatuses),sprintf('%d',isfinite(shapeCueRadii))};
 
                 if ( gameMode == 5 )
                     
@@ -546,11 +552,11 @@ function SpaceRocks
                 elseif ( gameMode == 4 )
                     
                     % Game mode 4 is rock spawn.  Double the number of
-                    % rocks, spawn them, then then go to hame mode 2
+                    % rocks, spawn them, then then go to game mode 2
                     % (play).
                     
                     numRocks = numRocks * 2;
-                    if ( numRocks > 5 )
+                    if ( numRocks > 8 )
                         
                         % If the player survived enough levels
                         % game mode 6 (you win) for 10 seconds
@@ -855,6 +861,7 @@ function SpaceRocks
                     return;
                 end
                 
+                killEnabled = gameMode == 2;
                 if ( renderCueStatuses(renderCueIds(1)) == 'h' )
                     
                     % Disable thrust render cue to reduce collider calcs
@@ -874,12 +881,13 @@ function SpaceRocks
                     fireBullet = false;
                     moveEnabled = gameMode == 0 || gameMode == 1 || gameMode == 2 || gameMode == 4;
                     fireEnabled = gameMode == 1 || gameMode == 2;
-                    killEnabled = gameMode == 2;
                     % Handle button pushes (Always run to clear buffer)
                     HandleKeyPresses;
-                    if ( ~isequal(keyDownArray,keyDownArrayDebug) )
-                        keyDownArrayDebug = keyDownArray;
-                        hTextDebug.String = sprintf('%d%d%d%d',keyDownArrayDebug);
+                    if ( debugMode )
+                        if ( ~isequal(keyDownArray,keyDownArrayDebug) )
+                            keyDownArrayDebug = keyDownArray;
+                            hTextDebug.String = sprintf('%d%d%d%d',keyDownArrayDebug);
+                        end
                     end
                     if ( moveEnabled )
                         if ( keyDownArray(1) )
@@ -1042,9 +1050,15 @@ function SpaceRocks
                     end
                     
                 elseif ( renderCueStatuses(renderCueIds(1)) == 'x' )
-                    % Make player explode
-                    renderCueStatuses(renderCueIds(1)) = 'f';
-                    playerDead = true;
+                    
+                    if ( killEnabled )
+                        % Make player explode
+                        renderCueStatuses(renderCueIds(1)) = 'f';
+                        playerDead = true;
+                    else
+                        % If player is not killable reset render cue status
+                        renderCueStatuses(renderCueIds(1)) = 'h';
+                    end
                 end
                 
         end
@@ -1211,9 +1225,10 @@ function SpaceRocks
                             -5 -4]/300*2;
                         colliderPositions = position + ...
                             [cosd(quantizedOrientation)*shape(:,1)+sind(quantizedOrientation)*shape(:,2) ...
-                            sind(quantizedOrientation)  *shape(:,1)-cosd(quantizedOrientation)*shape(:,2)];
+                            sind(quantizedOrientation)*shape(:,1)-cosd(quantizedOrientation)*shape(:,2)];
                         colliderCuePs(colliderIds,:) = colliderPositions(updateVersus,:);
                         colliderCueStatuses(colliderIds) = -2;
+
                     end
 
                     % Versus Logic
@@ -1625,7 +1640,9 @@ function SpaceRocks
                 hImage.CData = imageBuffer;
                 drawnow;
                 
-                frameCountDebug(1) = frameCountDebug(1) + 1;
+                if ( debugMode )
+                    frameCountDebug(1) = frameCountDebug(1) + 1;
+                end
 
             end
             
@@ -1710,9 +1727,11 @@ function SpaceRocks
                     if ( any(hits) )
                         hitCollider = colliderIds(hits);
                         colliderCueStatuses(hitCollider) = renderCueIds(renderCueIdx-1);
-                        statusStringDebug{end+1} = sprintf('Collider %d hit Render Cue %d',hitCollider(1), ...
-                            renderCueIds(renderCueIdx-1));
-                        statusStringDebug(1) = [];
+                        if ( debugMode )
+                            statusStringDebug{end+1} = sprintf('Collider %d hit Render Cue %d',hitCollider(1), ...
+                                renderCueIds(renderCueIdx-1));
+                            statusStringDebug(1) = [];
+                        end
                     end
                 end
 
