@@ -10,7 +10,7 @@ function SpaceRocks
     keyPressBuffer_idxProcessed = 1;
     keyDownArray = false(1,4);
     
-    numRocks0 = 4;
+    numRocks0 = 1;
     numRocks = numRocks0;
     rockPoints = 5;
     rockSize = 0.1;
@@ -1299,6 +1299,8 @@ function SpaceRocks
                             VtTan = Vt - VtLos;
                             VtTanN = norm(VtTan);
                             if ( VtTanN < bulletSpeed )
+                                % Relative speed is less than bullet speed
+                                % so hit is possible
                                 BtLos = Pu*sqrt(bulletSpeed^2-VtTanN^2);
                                 BtTan = VtTan/VtTanN*sqrt(bulletSpeed^2-norm(BtLos)^2);
                                 hVersus.XData = yPixels*(versusIPVAT(2)+[BtLos(1) 0 BtTan(1) nan 0 BtLos(1)+BtTan(1)]);
@@ -1314,6 +1316,8 @@ function SpaceRocks
                                 turnLeft = turnAngle < 0;
                                 if ( versusMode == 3 )
                                     if ( sign(turnAngle) ~= sign(versusInfo(2)) && abs(turnAngle) < 10 )
+                                        % If aim is tight enough fire the
+                                        % first bullet
                                         versusMode = 4;
                                         versusInfo = time;
                                         fireBullet = true;
@@ -1324,9 +1328,11 @@ function SpaceRocks
                                     end
                                 elseif ( versusMode == 4 )
                                     if ( bulletIndex == 1 )
+                                        % Fired all bullets
                                         versusMode = 5;
                                         versusInfo = time;
                                     elseif ( time > versusInfo(1)+1 && abs(turnAngle) < 0.1 )
+                                        % Fire next bullet
                                         fireBullet = true;
                                         turnRight = false;
                                         turnLeft = false;
@@ -1336,7 +1342,7 @@ function SpaceRocks
                             end
                         end
                     elseif ( versusMode==5 )
-                        % Stop
+                        % Stop velocity to setup next attack
                         versusIPVAT = renderCueIPVATs(renderCueId,:);
                         velocity = versusIPVAT(4:5);
                         if ( norm(velocity) > 0.01 )
@@ -1415,9 +1421,7 @@ function SpaceRocks
                         renderCueStatuses(bulletRenderCueId) = 'h';
                         
                     end
-                    
-                    
-                    
+
                     % Test if bullets hit as indicated by colliderSueStatus
                     % giving the shape that as hit
                     renderBulletIds = renderCueIds(3:end);
